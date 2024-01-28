@@ -1,9 +1,11 @@
 package com.herman87.demospringsecuritybyalliBouali.user;
 
+import com.herman87.demospringsecuritybyalliBouali.token.Token;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +34,8 @@ public class User implements UserDetails {
     private String email;
     private String password;
     private Role role;
+    @OneToMany(mappedBy = "user")
+    private List<Token> tokens;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

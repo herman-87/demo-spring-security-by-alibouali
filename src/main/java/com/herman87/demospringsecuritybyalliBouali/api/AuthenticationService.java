@@ -32,7 +32,8 @@ public class AuthenticationService {
                 .role(Role.USER)
                 .build();
 
-        userSpringRepository.save(user);
+        User savedUser = userSpringRepository.save(user);
+
         String jwtToken = jwtService.generateToken(user);
 
         return AuthenticationResponse.builder()
