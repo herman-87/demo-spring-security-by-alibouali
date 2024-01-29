@@ -11,9 +11,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,11 +39,25 @@ public class AuthenticationService {
 
         User savedUser = userSpringRepository.save(user);
         String jwtToken = jwtService.generateToken(user);
+        revokeAllUserTokens(user);
         saveUserToken(savedUser, jwtToken);
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .build();
+    }
+
+    private void revokeAllUserTokens(User user) {
+
+        List<Token> allValidTokensByUser = tokenSpringRepository.findAllValidTokensByUser(user.getId());
+        if (allValidTokensByUser.isEmpty()) {
+            return;
+        }
+        allValidTokensByUser.forEach(token -> {
+            token.setRevoked(true);
+            token.setExpired(true);
+        });
+        tokenSpringRepository.saveAll(allValidTokensByUser);
     }
 
     private void saveUserToken(User savedUser, String jwtToken) {
@@ -67,6 +82,7 @@ public class AuthenticationService {
         );
         User user = userSpringRepository.findByEmail(authenticationRequest.getEmail()).orElseThrow();
         String jwtToken = jwtService.generateToken(user);
+        revokeAllUserTokens(user);
         saveUserToken(user, jwtToken);
 
         return AuthenticationResponse.builder()

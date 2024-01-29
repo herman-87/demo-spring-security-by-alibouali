@@ -1,5 +1,6 @@
 package com.herman87.demospringsecuritybyalliBouali.config;
 
+import com.herman87.demospringsecuritybyalliBouali.token.TokenSpringRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenSpringRepository tokenSpringRepository;
 
     @Override
     protected void doFilterInternal(
@@ -30,21 +32,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        final String autheader = request.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
         final String jwt;
         String userEmail;
 
-        if (Objects.isNull(autheader) || !autheader.startsWith("Bearer ")) {
+        if (Objects.isNull(authHeader) || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
+        jwt = authHeader.substring(7);
 
-        jwt = autheader.substring(7);
         userEmail = jwtService.extractUsername(jwt);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
             UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+            Boolean isTokenValid = tokenSpringRepository.findByToken(jwt)
+                    .map(token -> !token.isExpired() && !token.isRevoked())
+                    .orElse(false);
+
+            if (jwtService.isTokenValid(jwt, userDetails) && isTokenValid) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
